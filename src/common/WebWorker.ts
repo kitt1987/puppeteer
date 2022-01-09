@@ -20,6 +20,10 @@ import { JSHandle } from './JSHandle.js';
 import { CDPSession } from './Connection.js';
 import { Protocol } from 'devtools-protocol';
 import { EvaluateHandleFn, SerializableOrJSHandle } from './EvalTypes.js';
+import {
+  NetworkManager,
+  NetworkManagerEmittedEvents,
+} from './NetworkManager.js';
 
 /**
  * @internal
@@ -37,6 +41,19 @@ export type ExceptionThrownCallback = (
   details: Protocol.Runtime.ExceptionDetails
 ) => void;
 type JSHandleFactory = (obj: Protocol.Runtime.RemoteObject) => JSHandle;
+
+/**
+ * All the events that a webworker instance may emit.
+ *
+ * @public
+ */
+export const enum WebWorkerEmittedEvents {
+  Request = 'request',
+  RequestServedFromCache = 'requestservedfromcache',
+  RequestFailed = 'requestfailed',
+  RequestFinished = 'requestfinished',
+  Response = 'response',
+}
 
 /**
  * The WebWorker class represents a
@@ -64,6 +81,7 @@ export class WebWorker extends EventEmitter {
   _url: string;
   _executionContextPromise: Promise<ExecutionContext>;
   _executionContextCallback: (value: ExecutionContext) => void;
+  private _networkManager: NetworkManager;
 
   /**
    *
@@ -107,6 +125,36 @@ export class WebWorker extends EventEmitter {
     this._client.on('Runtime.exceptionThrown', (exception) =>
       exceptionThrown(exception.exceptionDetails)
     );
+  }
+
+  async enableNetworkEvents(ignoreHTTPSErrors: boolean): Promise<void> {
+    this._networkManager = new NetworkManager(
+      this._client,
+      ignoreHTTPSErrors,
+      null
+    );
+    await this._networkManager.initialize();
+    const networkManager = this._networkManager;
+    networkManager.on(NetworkManagerEmittedEvents.Request, (event) =>
+      this.emit(WebWorkerEmittedEvents.Request, event)
+    );
+    networkManager.on(
+      NetworkManagerEmittedEvents.RequestServedFromCache,
+      (event) => this.emit(WebWorkerEmittedEvents.RequestServedFromCache, event)
+    );
+    networkManager.on(NetworkManagerEmittedEvents.Response, (event) =>
+      this.emit(WebWorkerEmittedEvents.Response, event)
+    );
+    networkManager.on(NetworkManagerEmittedEvents.RequestFailed, (event) =>
+      this.emit(WebWorkerEmittedEvents.RequestFailed, event)
+    );
+    networkManager.on(NetworkManagerEmittedEvents.RequestFinished, (event) =>
+      this.emit(WebWorkerEmittedEvents.RequestFinished, event)
+    );
+  }
+
+  async setRequestInterception(value: boolean): Promise<void> {
+    return this._networkManager.setRequestInterception(value);
   }
 
   /**

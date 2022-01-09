@@ -211,9 +211,11 @@
   * [GeolocationOptions](#geolocationoptions)
   * [WaitTimeoutOptions](#waittimeoutoptions)
 - [class: WebWorker](#class-webworker)
+  * [webWorker.enableNetworkEvents(ignoreHTTPSErrors)](#webworkerenablenetworkeventsignorehttpserrors)
   * [webWorker.evaluate(pageFunction[, ...args])](#webworkerevaluatepagefunction-args)
   * [webWorker.evaluateHandle(pageFunction[, ...args])](#webworkerevaluatehandlepagefunction-args)
   * [webWorker.executionContext()](#webworkerexecutioncontext)
+  * [webWorker.setRequestInterception(value)](#webworkersetrequestinterceptionvalue)
   * [webWorker.url()](#webworkerurl)
 - [class: Accessibility](#class-accessibility)
   * [accessibility.snapshot([options])](#accessibilitysnapshotoptions)
@@ -3220,6 +3222,11 @@ console.log('Current workers:');
 for (const worker of page.workers()) console.log('  ' + worker.url());
 ```
 
+#### webWorker.enableNetworkEvents(ignoreHTTPSErrors)
+
+- `ignoreHTTPSErrors` <[boolean]> Whether to ignore HTTPS errors during navigation. Defaults to `false`.
+- returns: <[Promise]>
+
 #### webWorker.evaluate(pageFunction[, ...args])
 
 - `pageFunction` <[function]|[string]> Function to be evaluated in the worker context
@@ -3249,6 +3256,11 @@ Shortcut for [(await worker.executionContext()).evaluateHandle(pageFunction, ...
 #### webWorker.executionContext()
 
 - returns: <[Promise]<[ExecutionContext]>>
+
+#### webWorker.setRequestInterception(value)
+
+- `value` <[boolean]> Whether to enable request interception.
+- returns: <[Promise]>
 
 #### webWorker.url()
 

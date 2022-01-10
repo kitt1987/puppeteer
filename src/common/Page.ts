@@ -520,6 +520,9 @@ export class Page extends EventEmitter {
             this._handleException.bind(this)
           );
           this._workers.set(event.sessionId, worker);
+          this._frameManager
+            .networkManager()
+            .addWorker(session, ignoreHTTPSErrors);
           this.emit(PageEmittedEvents.WorkerCreated, worker);
         }
       }

@@ -98,6 +98,8 @@ export class NetworkManager extends EventEmitter {
     latency: 0,
   };
 
+  private _requestWillBeSentSessionMap = new Map<string, CDPSession>();
+
   constructor(
     client: CDPSession,
     ignoreHTTPSErrors: boolean,
@@ -112,7 +114,7 @@ export class NetworkManager extends EventEmitter {
     this._client.on('Fetch.authRequired', this._onAuthRequired.bind(this));
     this._client.on(
       'Network.requestWillBeSent',
-      this._onRequestWillBeSent.bind(this)
+      this._onRequestWillBeSent.bind(this, this._client)
     );
     this._client.on(
       'Network.requestServedFromCache',
@@ -129,7 +131,7 @@ export class NetworkManager extends EventEmitter {
     this._client.on('Network.loadingFailed', this._onLoadingFailed.bind(this));
     this._client.on(
       'Network.responseReceivedExtraInfo',
-      this._onResponseReceivedExtraInfo.bind(this)
+      this._onResponseReceivedExtraInfo.bind(this, client)
     );
   }
 
@@ -139,6 +141,44 @@ export class NetworkManager extends EventEmitter {
       await this._client.send('Security.setIgnoreCertificateErrors', {
         ignore: true,
       });
+  }
+
+  async addWorker(
+    workerClient: CDPSession,
+    ignoreHTTPSErrors: boolean
+  ): Promise<void> {
+    await workerClient.send('Network.enable');
+    if (ignoreHTTPSErrors)
+      await workerClient.send('Security.setIgnoreCertificateErrors', {
+        ignore: true,
+      });
+
+    if (this._userRequestInterceptionEnabled || !!this._credentials)
+      await workerClient.send('Network.setCacheDisabled', {
+        cacheDisabled: this._cacheDisabled(),
+      });
+
+    workerClient.on(
+      'Network.requestWillBeSent',
+      this._onRequestWillBeSent.bind(this, workerClient)
+    );
+    workerClient.on(
+      'Network.requestServedFromCache',
+      this._onRequestServedFromCache.bind(this)
+    );
+    workerClient.on(
+      'Network.responseReceived',
+      this._onResponseReceived.bind(this)
+    );
+    workerClient.on(
+      'Network.loadingFinished',
+      this._onLoadingFinished.bind(this)
+    );
+    workerClient.on('Network.loadingFailed', this._onLoadingFailed.bind(this));
+    workerClient.on(
+      'Network.responseReceivedExtraInfo',
+      this._onResponseReceivedExtraInfo.bind(this, workerClient)
+    );
   }
 
   async authenticate(credentials?: Credentials): Promise<void> {
@@ -246,12 +286,16 @@ export class NetworkManager extends EventEmitter {
   }
 
   async _updateProtocolCacheDisabled(): Promise<void> {
+    // FIXME send to all workers.
     await this._client.send('Network.setCacheDisabled', {
       cacheDisabled: this._cacheDisabled(),
     });
   }
 
-  _onRequestWillBeSent(event: Protocol.Network.RequestWillBeSentEvent): void {
+  _onRequestWillBeSent(
+    networkClient: CDPSession,
+    event: Protocol.Network.RequestWillBeSentEvent
+  ): void {
     // Request interception doesn't happen for data URLs with Network Service.
     if (
       this._userRequestInterceptionEnabled &&
@@ -260,6 +304,7 @@ export class NetworkManager extends EventEmitter {
       const { requestId: networkRequestId } = event;
 
       this._networkEventManager.storeRequestWillBeSent(networkRequestId, event);
+      this._requestWillBeSentSessionMap.set(networkRequestId, networkClient);
 
       /**
        * CDP may have sent a Fetch.requestPaused event already. Check for it.
@@ -269,13 +314,13 @@ export class NetworkManager extends EventEmitter {
       if (requestPausedEvent) {
         const { requestId: fetchRequestId } = requestPausedEvent;
         this._patchRequestEventHeaders(event, requestPausedEvent);
-        this._onRequest(event, fetchRequestId);
+        this._onRequest(networkClient, event, fetchRequestId);
         this._networkEventManager.forgetRequestPaused(networkRequestId);
       }
 
       return;
     }
-    this._onRequest(event, null);
+    this._onRequest(networkClient, event, null);
   }
 
   _onAuthRequired(event: Protocol.Fetch.AuthRequiredEvent): void {
@@ -347,7 +392,9 @@ export class NetworkManager extends EventEmitter {
 
     if (requestWillBeSentEvent) {
       this._patchRequestEventHeaders(requestWillBeSentEvent, event);
-      this._onRequest(requestWillBeSentEvent, fetchRequestId);
+      const networkClient =
+        this._requestWillBeSentSessionMap.get(networkRequestId);
+      this._onRequest(networkClient, requestWillBeSentEvent, fetchRequestId);
     } else {
       this._networkEventManager.storeRequestPaused(networkRequestId, event);
     }
@@ -365,6 +412,7 @@ export class NetworkManager extends EventEmitter {
   }
 
   _onRequest(
+    networkClient: CDPSession,
     event: Protocol.Network.RequestWillBeSentEvent,
     fetchRequestId?: FetchRequestId
   ): void {
@@ -408,6 +456,7 @@ export class NetworkManager extends EventEmitter {
       : null;
     const request = new HTTPRequest(
       this._client,
+      networkClient,
       frame,
       fetchRequestId,
       this._userRequestInterceptionEnabled,
@@ -433,7 +482,7 @@ export class NetworkManager extends EventEmitter {
     extraInfo: Protocol.Network.ResponseReceivedExtraInfoEvent
   ): void {
     const response = new HTTPResponse(
-      this._client,
+      request.networkClient(),
       request,
       responsePayload,
       extraInfo
@@ -471,7 +520,7 @@ export class NetworkManager extends EventEmitter {
     }
 
     const response = new HTTPResponse(
-      this._client,
+      request.networkClient(),
       request,
       responseReceived.response,
       extraInfo
@@ -499,6 +548,7 @@ export class NetworkManager extends EventEmitter {
   }
 
   _onResponseReceivedExtraInfo(
+    networkClient: CDPSession,
     event: Protocol.Network.ResponseReceivedExtraInfoEvent
   ): void {
     // We may have skipped a redirect response/request pair due to waiting for
@@ -509,7 +559,11 @@ export class NetworkManager extends EventEmitter {
     );
     if (redirectInfo) {
       this._networkEventManager.responseExtraInfo(event.requestId).push(event);
-      this._onRequest(redirectInfo.event, redirectInfo.fetchRequestId);
+      this._onRequest(
+        networkClient,
+        redirectInfo.event,
+        redirectInfo.fetchRequestId
+      );
       return;
     }
 
@@ -542,6 +596,7 @@ export class NetworkManager extends EventEmitter {
 
     if (events) {
       this._networkEventManager.forget(requestId);
+      this._requestWillBeSentSessionMap.delete(requestId);
     }
   }
 

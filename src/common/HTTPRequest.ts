@@ -139,6 +139,7 @@ export class HTTPRequest {
   _redirectChain: HTTPRequest[];
 
   private _client: CDPSession;
+  private _networkClient: CDPSession;
   private _isNavigationRequest: boolean;
   private _allowInterception: boolean;
   private _interceptionHandled = false;
@@ -161,6 +162,7 @@ export class HTTPRequest {
    */
   constructor(
     client: CDPSession,
+    networkClient: CDPSession,
     frame: Frame,
     interceptionId: string,
     allowInterception: boolean,
@@ -168,6 +170,7 @@ export class HTTPRequest {
     redirectChain: HTTPRequest[]
   ) {
     this._client = client;
+    this._networkClient = networkClient;
     this._requestId = event.requestId;
     this._isNavigationRequest =
       event.requestId === event.loaderId && event.type === 'Document';
@@ -186,6 +189,10 @@ export class HTTPRequest {
 
     for (const key of Object.keys(event.request.headers))
       this._headers[key.toLowerCase()] = event.request.headers[key];
+  }
+
+  networkClient(): CDPSession {
+    return this._networkClient;
   }
 
   /**

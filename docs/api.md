@@ -355,6 +355,7 @@
   * [httpRequest.isInterceptResolutionHandled()](#httprequestisinterceptresolutionhandled)
   * [httpRequest.isNavigationRequest()](#httprequestisnavigationrequest)
   * [httpRequest.method()](#httprequestmethod)
+  * [httpRequest.networkClient()](#httprequestnetworkclient)
   * [httpRequest.postData()](#httprequestpostdata)
   * [httpRequest.redirectChain()](#httprequestredirectchain)
   * [httpRequest.resourceType()](#httprequestresourcetype)
@@ -5076,6 +5077,10 @@ Whether this request is driving frame's navigation.
 #### httpRequest.method()
 
 - returns: <[string]> Request's method (GET, POST, etc.)
+
+#### httpRequest.networkClient()
+
+- returns: <[CDPSession]> CDP session from where the request is sent.
 
 #### httpRequest.postData()
 

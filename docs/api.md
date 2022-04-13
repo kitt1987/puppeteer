@@ -347,6 +347,7 @@
   * [httpRequest.continueRequestOverrides()](#httprequestcontinuerequestoverrides)
   * [httpRequest.enqueueInterceptAction(pendingHandler)](#httprequestenqueueinterceptactionpendinghandler)
   * [httpRequest.failure()](#httprequestfailure)
+  * [httpRequest.fetchRemoteResponseBody()](#httprequestfetchremoteresponsebody)
   * [httpRequest.finalizeInterceptions()](#httprequestfinalizeinterceptions)
   * [httpRequest.frame()](#httprequestframe)
   * [httpRequest.headers()](#httprequestheaders)
@@ -362,6 +363,8 @@
   * [httpRequest.respond(response, [priority])](#httprequestrespondresponse-priority)
   * [httpRequest.response()](#httprequestresponse)
   * [httpRequest.responseForRequest()](#httprequestresponseforrequest)
+  * [httpRequest.responseHeaders()](#httprequestresponseheaders)
+  * [httpRequest.responseStatusCode()](#httprequestresponsestatuscode)
   * [httpRequest.url()](#httprequesturl)
 - [class: HTTPResponse](#class-httpresponse)
   * [httpResponse.buffer()](#httpresponsebuffer)
@@ -5007,6 +5010,10 @@ page.on('requestfailed', (request) => {
 });
 ```
 
+#### httpRequest.fetchRemoteResponseBody()
+
+- returns: <[Promise<string>]>
+
 #### httpRequest.finalizeInterceptions()
 
 - returns: <[Promise<unknown>]>
@@ -5165,6 +5172,14 @@ page.on('request', (request) => {
 - returns: <?[HTTPResponse]> A matching [HTTPResponse] object, or `null` if the response has not been received yet.
 
 Returns the current response object set by the previous call to respond() in Cooperative Intercept Mode.
+
+#### httpRequest.responseHeaders()
+
+- returns: <[Object]> Headers of the response.
+
+#### httpRequest.responseStatusCode()
+
+- returns: <[number]> Status code of the response.
 
 #### httpRequest.url()
 

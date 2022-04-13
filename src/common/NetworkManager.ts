@@ -406,7 +406,13 @@ export class NetworkManager extends EventEmitter {
       this._patchRequestEventHeaders(requestWillBeSentEvent, event);
       const networkClient =
         this._requestWillBeSentSessionMap.get(networkRequestId);
-      this._onRequest(networkClient, requestWillBeSentEvent, fetchRequestId);
+      this._onRequest(
+        networkClient,
+        requestWillBeSentEvent,
+        fetchRequestId,
+        event.responseStatusCode,
+        event.responseHeaders
+      );
     } else {
       this._networkEventManager.storeRequestPaused(networkRequestId, event);
     }
@@ -426,7 +432,9 @@ export class NetworkManager extends EventEmitter {
   _onRequest(
     networkClient: CDPSession,
     event: Protocol.Network.RequestWillBeSentEvent,
-    fetchRequestId?: FetchRequestId
+    fetchRequestId?: FetchRequestId,
+    responseStatusCode?: number,
+    responseHeaders?: Protocol.Fetch.HeaderEntry[]
   ): void {
     let redirectChain = [];
     if (event.redirectResponse) {
@@ -473,7 +481,9 @@ export class NetworkManager extends EventEmitter {
       fetchRequestId,
       this._userRequestInterceptionEnabled,
       event,
-      redirectChain
+      redirectChain,
+      responseStatusCode,
+      responseHeaders
     );
     this._networkEventManager.storeRequest(event.requestId, request);
     this.emit(NetworkManagerEmittedEvents.Request, request);

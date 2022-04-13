@@ -157,6 +157,9 @@ export class HTTPRequest {
   private _interceptHandlers: Array<() => void | PromiseLike<any>>;
   private _initiator: Protocol.Network.Initiator;
 
+  private _responseStatusCode: number;
+  private _responseHeaders: Record<string, string> = {};
+
   /**
    * @internal
    */
@@ -167,7 +170,9 @@ export class HTTPRequest {
     interceptionId: string,
     allowInterception: boolean,
     event: Protocol.Network.RequestWillBeSentEvent,
-    redirectChain: HTTPRequest[]
+    redirectChain: HTTPRequest[],
+    responseStatusCode?: number,
+    responseHeaders?: Protocol.Fetch.HeaderEntry[]
   ) {
     this._client = client;
     this._networkClient = networkClient;
@@ -189,6 +194,12 @@ export class HTTPRequest {
 
     for (const key of Object.keys(event.request.headers))
       this._headers[key.toLowerCase()] = event.request.headers[key];
+
+    this._responseStatusCode = responseStatusCode;
+    if (responseHeaders) {
+      for (const key of Object.keys(responseHeaders))
+        this._responseHeaders[key.toLowerCase()] = responseHeaders[key];
+    }
   }
 
   networkClient(): CDPSession {
@@ -289,6 +300,17 @@ export class HTTPRequest {
   }
 
   /**
+   * Fetch the remote response body for the intercepted request.
+   */
+  async fetchRemoteResponseBody(): Promise<string> {
+    const responseBody = await this._client.send('Fetch.getResponseBody', {
+      requestId: this._requestId,
+    });
+    if (!responseBody.base64Encoded) return responseBody.body;
+    return Buffer.from(responseBody.body, 'base64').toString('utf8');
+  }
+
+  /**
    * Contains the request's resource type as it was perceived by the rendering
    * engine.
    */
@@ -316,6 +338,21 @@ export class HTTPRequest {
    */
   headers(): Record<string, string> {
     return this._headers;
+  }
+
+  /**
+   * @returns an object with HTTP headers associated with the response. All
+   * header names are lower-case.
+   */
+  responseHeaders(): Record<string, string> {
+    return this._responseHeaders;
+  }
+
+  /**
+   * @returns The status code of the response (e.g., 200 for a success).
+   */
+  responseStatusCode(): number {
+    return this._responseStatusCode;
   }
 
   /**

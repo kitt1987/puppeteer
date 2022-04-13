@@ -89,6 +89,7 @@ export class NetworkManager extends EventEmitter {
   _credentials?: Credentials = null;
   _attemptedAuthentications = new Set<string>();
   _userRequestInterceptionEnabled = false;
+  _requestInterceptionStage: Protocol.Fetch.RequestStage = 'Request';
   _protocolRequestInterceptionEnabled = false;
   _userCacheDisabled = false;
   _emulatedNetworkConditions: InternalNetworkConditions = {
@@ -256,8 +257,17 @@ export class NetworkManager extends EventEmitter {
     await this._updateProtocolCacheDisabled();
   }
 
-  async setRequestInterception(value: boolean): Promise<void> {
+  async setRequestInterception(
+    value: boolean,
+    response: boolean
+  ): Promise<void> {
     this._userRequestInterceptionEnabled = value;
+    if (response) {
+      this._requestInterceptionStage = 'Response';
+    } else {
+      this._requestInterceptionStage = 'Request';
+    }
+
     await this._updateProtocolRequestInterception();
   }
 
@@ -270,7 +280,9 @@ export class NetworkManager extends EventEmitter {
         this._updateProtocolCacheDisabled(),
         this._client.send('Fetch.enable', {
           handleAuthRequests: true,
-          patterns: [{ urlPattern: '*' }],
+          patterns: [
+            { urlPattern: '*', requestStage: this._requestInterceptionStage },
+          ],
         }),
       ]);
     } else {

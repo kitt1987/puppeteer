@@ -184,7 +184,7 @@
   * [page.setGeolocation(options)](#pagesetgeolocationoptions)
   * [page.setJavaScriptEnabled(enabled)](#pagesetjavascriptenabledenabled)
   * [page.setOfflineMode(enabled)](#pagesetofflinemodeenabled)
-  * [page.setRequestInterception(value)](#pagesetrequestinterceptionvalue)
+  * [page.setRequestInterception(value, response)](#pagesetrequestinterceptionvalue-response)
     - [Multiple Intercept Handlers and Asynchronous Resolutions](#multiple-intercept-handlers-and-asynchronous-resolutions)
     - [Cooperative Intercept Mode](#cooperative-intercept-mode)
     - [Cooperative Request Continuation](#cooperative-request-continuation)
@@ -2357,9 +2357,10 @@ await page.setGeolocation({ latitude: 59.95, longitude: 30.31667 });
 
 > **NOTE** while this method sets the network connection to offline, it does not change the parameters used in [page.emulateNetworkConditions(networkConditions)](#pageemulatenetworkconditionsnetworkconditions).
 
-#### page.setRequestInterception(value)
+#### page.setRequestInterception(value, response)
 
 - `value` <[boolean]> Whether to enable request interception.
+- `response` <[boolean]> Whehter to intercept requests on the stage Response.
 - returns: <[Promise]>
 
 Activating request interception enables `request.abort`, `request.continue` and `request.respond` methods. This provides the capability to modify network requests that are made by a page.

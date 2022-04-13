@@ -837,6 +837,7 @@ export class Page extends EventEmitter {
 
   /**
    * @param value - Whether to enable request interception.
+   * @param response - Whehter to intercept requests on the stage Response
    *
    * @remarks
    * Activating request interception enables {@link HTTPRequest.abort},
@@ -867,8 +868,13 @@ export class Page extends EventEmitter {
    * ```
    * NOTE: Enabling request interception disables page caching.
    */
-  async setRequestInterception(value: boolean): Promise<void> {
-    return this._frameManager.networkManager().setRequestInterception(value);
+  async setRequestInterception(
+    value: boolean,
+    response: boolean
+  ): Promise<void> {
+    return this._frameManager
+      .networkManager()
+      .setRequestInterception(value, response);
   }
 
   /**

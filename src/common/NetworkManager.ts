@@ -326,7 +326,13 @@ export class NetworkManager extends EventEmitter {
       if (requestPausedEvent) {
         const { requestId: fetchRequestId } = requestPausedEvent;
         this._patchRequestEventHeaders(event, requestPausedEvent);
-        this._onRequest(networkClient, event, fetchRequestId);
+        this._onRequest(
+          networkClient,
+          event,
+          fetchRequestId,
+          requestPausedEvent.responseStatusCode,
+          requestPausedEvent.responseHeaders
+        );
         this._networkEventManager.forgetRequestPaused(networkRequestId);
       }
 
@@ -383,6 +389,13 @@ export class NetworkManager extends EventEmitter {
     const { networkId: networkRequestId, requestId: fetchRequestId } = event;
 
     if (!networkRequestId) {
+      if (this._requestInterceptionStage === 'Response') {
+        this._client
+          .send('Fetch.continueRequest', {
+            requestId: event.requestId,
+          })
+          .catch(debugError);
+      }
       return;
     }
 

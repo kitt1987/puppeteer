@@ -158,7 +158,7 @@ export class HTTPRequest {
   private _initiator: Protocol.Network.Initiator;
 
   private _responseStatusCode: number;
-  private _responseHeaders: Record<string, string> = {};
+  private _responseHeaders: Record<string, string>;
 
   /**
    * @internal
@@ -197,8 +197,9 @@ export class HTTPRequest {
 
     this._responseStatusCode = responseStatusCode;
     if (responseHeaders) {
-      for (const key of Object.keys(responseHeaders))
-        this._responseHeaders[key.toLowerCase()] = responseHeaders[key];
+      this._responseHeaders = {};
+      for (const h of responseHeaders)
+        this._responseHeaders[h.name.toLowerCase()] = h.value;
     }
   }
 
@@ -303,8 +304,9 @@ export class HTTPRequest {
    * Fetch the remote response body for the intercepted request.
    */
   async fetchRemoteResponseBody(): Promise<string> {
+    assert(this._allowInterception, 'Request Interception is not enabled!');
     const responseBody = await this._client.send('Fetch.getResponseBody', {
-      requestId: this._requestId,
+      requestId: this._interceptionId,
     });
     if (!responseBody.base64Encoded) return responseBody.body;
     return Buffer.from(responseBody.body, 'base64').toString('utf8');

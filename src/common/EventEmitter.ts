@@ -3,6 +3,7 @@ import mitt, {
   EventType,
   Handler,
 } from '../../vendor/mitt/src/index.js';
+import { debugError } from './helper.js';
 
 /**
  * @public
@@ -99,6 +100,7 @@ export class EventEmitter implements CommonEventEmitter {
    * @returns `true` if there are any listeners, `false` if there are not.
    */
   emit(event: EventType, eventData?: unknown): boolean {
+    debugError(`EventEmitter.emit: ${String(event)}: ${String(eventData)}`);
     this.emitter.emit(event, eventData);
     return this.eventListenersCount(event) > 0;
   }

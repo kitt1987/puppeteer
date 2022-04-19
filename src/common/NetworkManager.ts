@@ -309,7 +309,6 @@ export class NetworkManager extends EventEmitter {
     event: Protocol.Network.RequestWillBeSentEvent
   ): void {
     // Request interception doesn't happen for data URLs with Network Service.
-    debugError(`Request will be sent: ${event.request.url}`);
     if (
       this._userRequestInterceptionEnabled &&
       !event.request.url.startsWith('data:')
@@ -325,9 +324,6 @@ export class NetworkManager extends EventEmitter {
       const requestPausedEvent =
         this._networkEventManager.getRequestPaused(networkRequestId);
       if (requestPausedEvent) {
-        debugError(
-          `fire request event for: ${event.request.url}, ${networkRequestId}`
-        );
         const { requestId: fetchRequestId } = requestPausedEvent;
         this._patchRequestEventHeaders(event, requestPausedEvent);
         this._onRequest(
@@ -339,10 +335,6 @@ export class NetworkManager extends EventEmitter {
         );
         this._networkEventManager.forgetRequestPaused(networkRequestId);
       }
-
-      debugError(
-        `No paused event found for: ${event.request.url}, ${networkRequestId}`
-      );
 
       return;
     }
@@ -383,7 +375,6 @@ export class NetworkManager extends EventEmitter {
    *
    */
   _onRequestPaused(event: Protocol.Fetch.RequestPausedEvent): void {
-    debugError(`Request paused: ${event.request.url}`);
     if (
       !this._userRequestInterceptionEnabled &&
       this._protocolRequestInterceptionEnabled
@@ -398,7 +389,6 @@ export class NetworkManager extends EventEmitter {
     const { networkId: networkRequestId, requestId: fetchRequestId } = event;
 
     if (!networkRequestId) {
-      debugError(`No networkId found in: ${event.request.url}`);
       if (this._requestInterceptionStage === 'Response') {
         this._client
           .send('Fetch.continueRequest', {
@@ -419,9 +409,6 @@ export class NetworkManager extends EventEmitter {
         (requestWillBeSentEvent.request.url !== event.request.url ||
           requestWillBeSentEvent.request.method !== event.request.method)
       ) {
-        debugError(
-          `Got a mismatched request(${requestWillBeSentEvent.request.method}, ${requestWillBeSentEvent.request.url}) for: ${event.request.url}`
-        );
         this._networkEventManager.forgetRequestWillBeSent(networkRequestId);
         return;
       }
@@ -429,7 +416,6 @@ export class NetworkManager extends EventEmitter {
     })();
 
     if (requestWillBeSentEvent) {
-      debugError(`Matched previous request found for: ${event.request.url}`);
       this._patchRequestEventHeaders(requestWillBeSentEvent, event);
       const networkClient =
         this._requestWillBeSentSessionMap.get(networkRequestId);
@@ -441,9 +427,6 @@ export class NetworkManager extends EventEmitter {
         event.responseHeaders
       );
     } else {
-      debugError(
-        `Save paused request for the coming request of: ${event.request.url}`
-      );
       this._networkEventManager.storeRequestPaused(networkRequestId, event);
     }
   }

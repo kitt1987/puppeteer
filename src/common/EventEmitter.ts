@@ -1,14 +1,22 @@
-import mitt, {
-  Emitter,
-  EventType,
-  Handler,
-} from '../../vendor/mitt/src/index.js';
+// import mitt, {
+//   Emitter,
+//   EventType,
+//   Handler,
+// } from '../../vendor/mitt/src/index.js';
 import { debugError } from './helper.js';
+import { EventEmitter as NativeEventEmitter } from 'events';
 
 /**
  * @public
  */
-export { EventType, Handler };
+export type EventType = string | symbol;
+
+// An event handler can take an optional event argument
+// and should not return a value
+/**
+ * @public
+ */
+export type Handler<T = any> = (event?: T) => void;
 
 /**
  * @public
@@ -42,14 +50,15 @@ export interface CommonEventEmitter {
  * @public
  */
 export class EventEmitter implements CommonEventEmitter {
-  private emitter: Emitter;
-  private eventsMap = new Map<EventType, Handler[]>();
+  private emitter: NativeEventEmitter;
+  // private eventsMap = new Map<EventType, Handler[]>();
 
   /**
    * @internal
    */
   constructor() {
-    this.emitter = mitt(this.eventsMap);
+    this.emitter = new NativeEventEmitter();
+    this.emitter.setMaxListeners(0);
   }
 
   /**
@@ -102,7 +111,7 @@ export class EventEmitter implements CommonEventEmitter {
   emit(event: EventType, eventData?: unknown): boolean {
     debugError(`EventEmitter.emit: ${String(event)}: ${String(eventData)}`);
     this.emitter.emit(event, eventData);
-    return this.eventListenersCount(event) > 0;
+    return this.emitter.listenerCount(event) > 0;
   }
 
   /**
@@ -112,12 +121,12 @@ export class EventEmitter implements CommonEventEmitter {
    * @returns `this` to enable you to chain method calls.
    */
   once(event: EventType, handler: Handler): EventEmitter {
-    const onceHandler: Handler = (eventData) => {
-      handler(eventData);
-      this.off(event, onceHandler);
-    };
-
-    return this.on(event, onceHandler);
+    // const onceHandler: Handler = (eventData) => {
+    //   handler(eventData);
+    //   this.off(event, onceHandler);
+    // };
+    this.emitter.once(event, handler);
+    return this;
   }
 
   /**
@@ -127,7 +136,7 @@ export class EventEmitter implements CommonEventEmitter {
    * @returns the number of listeners bound to the given event
    */
   listenerCount(event: EventType): number {
-    return this.eventListenersCount(event);
+    return this.emitter.listenerCount(event);
   }
 
   /**
@@ -137,15 +146,11 @@ export class EventEmitter implements CommonEventEmitter {
    * @returns `this` to enable you to chain method calls.
    */
   removeAllListeners(event?: EventType): EventEmitter {
-    if (event) {
-      this.eventsMap.delete(event);
-    } else {
-      this.eventsMap.clear();
-    }
+    this.emitter.removeAllListeners(event);
     return this;
   }
 
-  private eventListenersCount(event: EventType): number {
-    return this.eventsMap.get(event)?.length || 0;
-  }
+  // private eventListenersCount(event: EventType): number {
+  //   return this.eventsMap.get(event)?.length || 0;
+  // }
 }

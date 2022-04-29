@@ -502,10 +502,7 @@ export class NetworkManager extends EventEmitter {
       responseHeaders
     );
     this._networkEventManager.storeRequest(event.requestId, request);
-    debugError(`emit event for: ${event.request.url}`);
-    if (!this.emit(NetworkManagerEmittedEvents.Request, request)) {
-      debugError(`No listeners for: ${event.request.url}`);
-    }
+    this.emit(NetworkManagerEmittedEvents.Request, request);
     request.finalizeInterceptions();
   }
 
